@@ -1,0 +1,113 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:5.7
+          imagePullPolicy: Always
+
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-password
+                  key: password
+          ports:
+            - containerPort: 3306
+
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: my-sql-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+        - name: my-sql-script
+          configMap:
+            name: my-sql-script
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: webapps
+spec:
+  selector:
+    app: mysql
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-password
+type: Opaque
+data:
+  password: cm9vdEBAMTIz
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-sql-script
+data:
+  inti.sql: |
+    CREATE DATABASE IF NOT EXISTS demo;
+    CREATE USER 'root'@'mysql-service' IDENTIFIED BY 'root@@123';
+    GRANT ALL PRIVILEGES ON demo.* TO 'root'@'mysql-service';
+    USE demo;
+    CREATE TABLE IF NOT EXISTS demo.employee (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255),
+        phone TEXT,
+        address VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO employee (name, email, phone, address) VALUES ('John Doe', 'johndoe@example.com', '123-456-7890', '123 Main Street');
+    INSERT INTO employee (name, email, phone, address) VALUES ('Jane Smith', 'janesmith@example.com', '987-654-3210', '456 Elm Street');
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-volume
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/mysql-data"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

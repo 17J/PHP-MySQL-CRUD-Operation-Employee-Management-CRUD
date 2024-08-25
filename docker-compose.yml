@@ -7,7 +7,7 @@ services:
   frontend:
     build: .  # Build the frontend image from the current directory
     ports:
-      - "8080:80"
+      - "9000:80"
     volumes:
       - .:/var/www/html   # Map container port 8085 to host port 8080 (standard HTTP)
     environment:
@@ -16,7 +16,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_USER=${MYSQL_USER}
     depends_on:
-      - db  # Ensure database is ready before starting frontend
+        db:
+          condition: service_healthy  # Ensure database is ready before starting frontend
     
 
   # Use a more descriptive service name

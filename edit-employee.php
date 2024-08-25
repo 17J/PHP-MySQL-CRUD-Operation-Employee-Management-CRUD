@@ -1,12 +1,12 @@
 <?php
-require 'vendor/autoload.php';
-Dotenv::load();
+//require 'vendor/autoload.php';
+//Dotenv::load();
 
      //connect to database
-     $servername = $_ENV['MYSQL_HOST'];
-     $username = $_ENV['MYSQL_USER'];
-     $password = $_ENV['MYSQL_PASSWORD'];
-     $database = $_ENV['MYSQL_NAME'];
+     $servername = "mysql-service";
+     $username = "root";
+     $password = "root@@123";
+     $database = "demo";
  
      //Create Connection
      $connection = new mysqli($servername, $username, $password, $database);

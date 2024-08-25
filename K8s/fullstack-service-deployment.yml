@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backendserver
+          image: 17rj/fullstackphp-demo:latest
+          ports:
+            - containerPort: 9000
+          envFrom:
+            - secretRef:
+                name: mysql-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: webapps
+spec:
+  selector:
+    app: backend
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+data:
+  MYSQL_HOST : ZGI=
+  MYSQL_USER : cm9vdA==
+  MYSQL_PASSWORD : cm9vdEAxMjM=
+  MYSQL_NAME : ZGVtbw==
+  MYSQL_ROOT_PASSWORD: cm9vdEAxMjM=
