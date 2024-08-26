@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: backendserver
-          image: 17rj/fullstackphp-demo:latest
+          image: 17rj/fullstack-php:latest
           ports:
             - containerPort: 9000
           envFrom:
@@ -43,8 +43,4 @@ kind: Secret
 metadata:
   name: mysql-secret
 data:
-  MYSQL_HOST : ZGI=
-  MYSQL_USER : cm9vdA==
-  MYSQL_PASSWORD : cm9vdEAxMjM=
-  MYSQL_NAME : ZGVtbw==
-  MYSQL_ROOT_PASSWORD: cm9vdEAxMjM=
+  MYSQL_PASSWORD: cm9vdEAxMjM=
