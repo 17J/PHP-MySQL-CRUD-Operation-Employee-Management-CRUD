@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+    environment{
+        SCANNER_HOME= tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Git Login') {
+            steps {
+                echo 'Git Checkout'
+                git branch: 'devsecops', changelog: false, poll: false, url: 'https://github.com/17J/PHP-MySQL-CRUD-Operation-Employee-Management-CRUD.git'
+                
+            }
+        }
+        stage('Trivy Scan Repo') {
+            steps {
+                echo 'Trivy Scan'
+                sh 'trivy  repo --format table -o repo-report.html https://github.com/17J/PHP-MySQL-CRUD-Operation-Employee-Management-CRUD.git'
+                
+            }
+        }
+        stage('SonarQube Analsyis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=fullstack -Dsonar.projectKey=fullstack \
+                            -Dsonar.sources=. '''
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                  waitForQualityGate abortPipeline: false, credentialsId: 'sonar-cred' 
+                }	
+            }
+        }
+        stage('Docker Build & Push'){
+           steps {
+               script{
+                   withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                       sh 'docker build -t vuetest .'
+                       sh 'docker tag vuetest 17rj/demotest'
+                   }
+               }
+            }
+        }
+        stage('Trivy Image Scan'){
+             steps {
+                
+                sh 'trivy image --format table -o image-report.html  17rj/demotest'
+            }
+            
+        }
+        stage('Docker  Push'){
+           steps {
+               script{
+                   withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                       sh 'docker push 17rj/demotest'
+    
+                   }
+               }
+            }
+        }
+        stage('Deploy To Kubernetes') {
+            steps {
+               withKubeConfig(caCertificate: '', clusterName: 'new-eks17', contextName: '', credentialsId: 'kube-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://15F941913FE6CE2B63C55BBA4628AE13.gr7.us-east-1.eks.amazonaws.com') {
+                dir('/var/lib/jenkins/workspace/fullstack-app/K8s/') {
+                   sh 'kubectl apply -f fullstack-db-service-deployment.yml -n webapps'
+                   sh 'kubectl apply -f fullstack-service-deployment.yml -n webapps'
+                   sleep 60
+                 }
+               }
+            }
+        }
+        stage('Check To Kubernetes') {
+            steps {
+               withKubeConfig(caCertificate: '', clusterName: 'new-eks17', contextName: '', credentialsId: 'kube-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://15F941913FE6CE2B63C55BBA4628AE13.gr7.us-east-1.eks.amazonaws.com') {
+                dir('/var/lib/jenkins/workspace/fullstack-app/K8s/') {
+                   sh 'kubectl get svc -n webapps'
+                   sh 'kubectl get pods -n webapps'
+                 }
+               }
+            }
+        }
+    }
+}
